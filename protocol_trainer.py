@@ -1,177 +1,272 @@
 import streamlit as st
+import pandas as pd
 import time
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="Lab Protocol Trainer", layout="wide", page_icon="🎓")
+# --- APP CONFIGURATION ---
+st.set_page_config(
+    page_title="Lab Commander Training",
+    page_icon="🧪",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# --- CSS FOR REALISM ---
+# --- CUSTOM CSS FOR "COURSE" FEEL ---
 st.markdown("""
     <style>
-    .hardware-card { background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #ff4b4b; margin-bottom: 10px; }
-    .sim-screen { background-color: #000; color: #0f0; padding: 20px; font-family: 'Courier New', monospace; border-radius: 5px; margin-bottom: 20px; }
-    .success-msg { color: green; font-weight: bold; }
-    .error-msg { color: red; font-weight: bold; }
+    .main-header { font-size: 32px; font-weight: bold; color: #2E86C1; margin-bottom: 20px; }
+    .sub-header { font-size: 24px; font-weight: bold; color: #2874A6; margin-top: 20px; }
+    .instruction-box { background-color: #f4f6f9; border-left: 5px solid #2E86C1; padding: 15px; margin: 10px 0; }
+    .warning-box { background-color: #fff5f5; border-left: 5px solid #c53030; padding: 15px; margin: 10px 0; }
+    .success-box { background-color: #f0fff4; border-left: 5px solid #38a169; padding: 15px; margin: 10px 0; }
+    .sim-button { width: 100%; height: 60px; font-weight: bold; font-size: 18px; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE (To track progress) ---
-if 'sim_step' not in st.session_state:
-    st.session_state.sim_step = 0
-if 'sim_log' not in st.session_state:
-    st.session_state.sim_log = []
+# --- SESSION STATE MANAGEMENT ---
+if 'progress' not in st.session_state:
+    st.session_state.progress = {
+        "setup": False,
+        "baseline": False,
+        "giladi": False,
+        "vr": False
+    }
+
+# --- HELPER FUNCTIONS ---
+def mark_complete(module):
+    st.session_state.progress[module] = True
+    st.balloons()
+    st.success(f"✅ Module '{module.capitalize()}' Complete! Move to the next section.")
+
+def check_dual_hand(left_action, right_action, expected_left, expected_right, feedback_success):
+    if left_action == expected_left and right_action == expected_right:
+        st.markdown(f"<div class='success-box'><b>CORRECT!</b> {feedback_success}</div>", unsafe_allow_html=True)
+        return True
+    else:
+        st.markdown(f"<div class='warning-box'><b>INCORRECT.</b><br>You selected: Left='{left_action}' | Right='{right_action}'<br>Expected: Left='{expected_left}' | Right='{expected_right}'</div>", unsafe_allow_html=True)
+        return False
 
 # --- SIDEBAR NAVIGATION ---
-st.sidebar.header("🎓 Training Modules")
-module = st.sidebar.radio("Select Module:", [
-    "1. The Hardware Zoo",
-    "2. The 'Sync' Theory",
-    "3. Practice: The 5-Min Walk",
-    "4. Exam: Full Giladi Trial"
+st.sidebar.title("🧪 Lab Academy")
+st.sidebar.write("Welcome, Trainee.")
+st.sidebar.progress(sum(st.session_state.progress.values()) / 4)
+
+menu = st.sidebar.radio("Course Modules:", [
+    "1. Hardware & Setup",
+    "2. Baseline Protocols",
+    "3. Giladi Protocols",
+    "4. VR Protocols",
+    "5. Final Review"
 ])
 
-# --- MODULE 1: HARDWARE ---
-if module == "1. The Hardware Zoo":
-    st.title("Module 1: Know Your Gear")
-    st.write("Before you touch a button, you must identify the equipment.")
+# ==========================================
+# MODULE 1: HARDWARE & SETUP
+# ==========================================
+if menu == "1. Hardware & Setup":
+    st.markdown("<div class='main-header'>Module 1: The Setup</div>", unsafe_allow_html=True)
+    st.write("Before we test a patient, we must build the lab. Follow the steps below.")
+
+    tab1, tab2, tab3, tab4 = st.tabs(["🔵 OPAL Sensors", "🔴 GoPros", "🟢 Equivital", "💾 MobilityLab"])
+
+    with tab1:
+        st.markdown("### Setting up the OPALs")
+        st.image("https://support.apdm.com/hc/article_attachments/360000085206/Opals_in_Dock.png", caption="OPAL Docking Station", width=400)
+        st.info("Goal: 5 Sensors (2 Shins, 2 Feet, 1 Lower Back).")
+        
+        check_1 = st.checkbox("Plug Access Point into Stand & Dock")
+        check_2 = st.checkbox("Plug Power Cord to Wall")
+        check_3 = st.checkbox("Sensors are flashing GREEN (Charged)")
+        check_4 = st.checkbox("Remote is plugged into computer & Switch is ON (Green)")
+        
+        if check_1 and check_2 and check_3 and check_4:
+            st.success("OPAL Hardware Ready!")
+
+    with tab2:
+        st.markdown("### Setting up the GoPros")
+        st.warning("⚠️ CRITICAL: Always pair in the app BEFORE placing cameras on tripods.")
+        
+        st.markdown("""
+        1. Turn on Cameras (Frontal & Sagittal).
+        2. Swipe Down -> Left -> **"Pair Device"**.
+        3. Open **GoProSync App** on Desktop.
+        4. Type `Connect` (Case Sensitive!) -> Enter.
+        5. Type `All` -> Enter.
+        6. Listen for the **BEEP**.
+        7. Type `Record` -> Enter (Wait for pending message).
+        """)
+        
+        q_gopro = st.radio("What must you do immediately after the app finds the cameras?", 
+                           ["Put them on tripods", "Type 'All' to connect", "Start recording"], index=None)
+        if q_gopro == "Type 'All' to connect":
+            st.success("Correct.")
+
+    with tab3:
+        st.markdown("### Setting up Equivital")
+        st.markdown("""
+        1. Connect SEM to Laptop via USB.
+        2. **Equivital Manager:** 'SEM Configuration' -> Apply.
+        3. **LabChart:** Open Template -> Click 'Don't Load' (3x).
+        4. Wait for Serial Number pop-up -> OK.
+        5. **File -> Save As...** (Use Naming Convention).
+        6. Unplug SEM -> Put in Belt -> Put on Patient.
+        """)
+
+    with tab4:
+        st.markdown("### MobilityLab Config")
+        st.markdown("""
+        1. Open App -> Configure Hardware -> Rescan.
+        2. **Subjects Tab:** +New Subject -> Enter Details -> Save.
+        3. **New Test:** Select `PD_HRV`.
+        4. **Outfitting:** Place sensors on patient (Shins, Feet, Sacrum).
+        """)
+        
+        if st.button("I have completed all setup steps"):
+            mark_complete("setup")
+
+# ==========================================
+# MODULE 2: BASELINE
+# ==========================================
+elif menu == "2. Baseline Protocols":
+    st.markdown("<div class='main-header'>Module 2: Baseline Measurements</div>", unsafe_allow_html=True)
+    st.write("We measure the patient in 3 states: Sitting, Standing, Walking (5 mins each).")
+    
+    st.markdown("<div class='instruction-box'>🧠 <b>The Concept: Simultaneous Triggers</b><br>We have 3 computers. You must start them at the EXACT same time using two hands.</div>", unsafe_allow_html=True)
+
+    # --- SIMULATOR SECTION ---
+    st.markdown("### 🎮 Simulation: The 5-Minute Walk")
+    st.write("Imagine you are about to start the Walking Baseline. Configure your hands:")
     
     col1, col2 = st.columns(2)
     with col1:
-        st.image("https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=300&q=80", caption="Symbolic Lab Image")
-        with st.expander("🔵 OPAL Sensors (MobilityLab)"):
-            st.markdown("""
-            **What it is:** Motion sensors on the body.
-            **Critical Check:** Must be flashing GREEN before starting.
-            **Placement:** 2 Shins, 2 Feet, 1 Lower Back (Belt).
-            """)
-        with st.expander("🔴 GoPros (Video Sync)"):
-            st.markdown("""
-            **What it is:** 2 Cameras (Frontal + Sagittal).
-            **Critical Check:** Battery must be charged. Red light flashes when recording.
-            **The Trap:** Always check they are paired in the GoProSync App first!
-            """)
-            
+        st.markdown("### ✋ Left Hand (Equivital)")
+        left_hand = st.selectbox("Select Action:", ["(Nothing)", "Shift + A", "Shift + E", "Shift + S", "Remote >"], key="base_L")
     with col2:
-        with st.expander("🟢 Equivital (LabChart)"):
-            st.markdown("""
-            **What it is:** Chest strap for physiological data (ECG/Breathing).
-            **Critical Check:** Ensure SEM is clicked in.
-            **Key Commands:** `Shift+A` (Start), `Shift+E` (End).
-            """)
-        with st.expander("📱 Sync App (Tablet)"):
-            st.markdown("""
-            **What it is:** The 'Master Clock' that logs timestamps.
-            **Rule:** You almost ALWAYS press this simultaneously with another key.
-            """)
+        st.markdown("### ✋ Right Hand (Tablet)")
+        right_hand = st.selectbox("Select Action:", ["(Nothing)", "Start 5 min Sitting", "Start 5 min Walk", "End 5 min Walk", "Start 2 min Walk"], key="base_R")
 
-# --- MODULE 2: THEORY ---
-elif module == "2. The 'Sync' Theory":
-    st.title("Module 2: The Synchronization Dance")
-    st.markdown("### The Golden Rule: Simultaneous Pressing")
-    st.info("💡 **Why do we do this?** We have 3 different computers collecting data. If you start one 5 seconds late, we can't match the heart rate to the walking speed later. We use 'Triggers' to start them at the exact same millisecond.")
+    st.markdown("**Context:** You are starting the **WALKING** baseline.")
+    
+    if st.button("💥 EXECUTE SIMULTANEOUS PRESS", key="btn_base"):
+        # Logic: Baseline Walking Start = Shift+A & Start 5 min Walk
+        # Note: Script says Shift+A is for Baseline. 
+        if check_dual_hand(left_hand, right_hand, "Shift + A", "Start 5 min Walk", "You started the Equivital and the Sync Timer together."):
+            st.markdown("...5 Minutes Later...")
+            st.info("Now STOP the trial.")
+            # Challenge them to stop it
+            mark_complete("baseline")
 
-    st.subheader("The 3 Key Combinations")
-    st.markdown("Memorize these pairs. You will be tested.")
-    
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown("#### 1. The Physio Start")
-        st.markdown("<div class='hardware-card'>Left Hand: <b>Shift + A</b> (Equivital)<br>Right Hand: <b>'Start'</b> (Sync App)</div>", unsafe_allow_html=True)
-    with c2:
-        st.markdown("#### 2. The Video Start")
-        st.markdown("<div class='hardware-card'>Left Hand: <b>Right Arrow ></b> (Remote)<br>Right Hand: <b>'Start'</b> (Sync App)</div>", unsafe_allow_html=True)
-    with c3:
-        st.markdown("#### 3. The Walk Start")
-        st.markdown("<div class='hardware-card'>Left Hand: <b>Shift + W</b> (Equivital)<br>Right Hand: <b>'Start Walk'</b> (Sync App)</div>", unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("### 📷 Camera Check")
+    cam_pos = st.radio("Where do the cameras go for the Walking Baseline?", 
+                       ["Green Tape (Whiteboard)", "Blue Mark (Entry/Gait Carpet)"], horizontal=True)
+    if cam_pos == "Blue Mark (Entry/Gait Carpet)":
+        st.success("Correct. Always Blue for Baseline.")
+    elif cam_pos:
+        st.error("Wrong. Green is for Giladi.")
 
-# --- MODULE 3: SIMULATOR (WALKING BASELINE) ---
-elif module == "3. Practice: The 5-Min Walk":
-    st.title("✈️ Flight Simulator: Baseline Walking")
-    st.write("Welcome to the Virtual Lab. Your goal is to successfully start the 5-Minute Walking Baseline without error.")
+# ==========================================
+# MODULE 3: GILADI PROTOCOL
+# ==========================================
+elif menu == "3. Giladi Protocols":
+    st.markdown("<div class='main-header'>Module 3: The Giladi Protocol</div>", unsafe_allow_html=True)
+    st.markdown("This involves 8 specific trials. The trigger logic changes here!")
     
-    # Define the correct sequence
-    # Step 0: Check Cameras -> Step 1: Type Record -> Step 2: Shift+A/Sync -> Step 3: Wait -> Step 4: Stop
+    st.warning("⚠️ **Camera Change:** Move cameras to **GREEN TAPE** (Whiteboard + Window).")
+
+    st.markdown("### The Workflow Loop")
+    st.code("""
+    1. VideoSync: Recall 'Record' -> Enter.
+    2. MobilityLab: Wait for instruction.
+    3. TRIGGER START (Remote + Tablet).
+    4. Wait for completion.
+    5. TRIGGER END (Remote + Tablet).
+    """)
+
+    st.markdown("### 🎮 Simulation: Starting a Trial")
+    st.write("The Investigator says: *'Any time after the BEEP'*.")
     
-    st.markdown("### 🖥️ Virtual Control Panel")
-    
-    # Status Screen
-    status_text = "SYSTEM IDLE. Waiting for protocol start..."
-    if st.session_state.sim_step == 1: status_text = "Cameras Checked. Video Sync Ready."
-    if st.session_state.sim_step == 2: status_text = "Video Pending. Ready for Trigger."
-    if st.session_state.sim_step == 3: status_text = "RECORDING IN PROGRESS (Timer Running)..."
-    
-    st.markdown(f"<div class='sim-screen'>{status_text}</div>", unsafe_allow_html=True)
-    
-    # Interactive Buttons
-    col1, col2, col3 = st.columns(3)
-    
+    col1, col2 = st.columns(2)
     with col1:
-        st.subheader("1. Setup Actions")
-        if st.button("👀 Check Camera Positions"):
-            if st.session_state.sim_step == 0:
-                st.session_state.sim_step = 1
-                st.success("Correct! Always check the blue tape first.")
-            else:
-                st.warning("You already did this.")
-                
-        if st.button("⌨️ Type 'Record' + Enter"):
-            if st.session_state.sim_step == 1:
-                st.session_state.sim_step = 2
-                st.success("Correct! The system is now 'Pending'. Don't press anything else yet!")
-            elif st.session_state.sim_step == 0:
-                st.error("WRONG! You forgot to check the camera positions first. The participant walked out of frame!")
-            else:
-                st.warning("Already done.")
-
+        st.markdown("### ✋ Left Hand (Remote)")
+        gl_left = st.selectbox("Select Action:", ["(Nothing)", "Shift + A", "Remote > (Slide Forward)", "Shift + S"], key="gl_L")
     with col2:
-        st.subheader("2. Triggers (Simultaneous)")
-        if st.button("🚀 Shift+A & Sync 'Start'"):
-            if st.session_state.sim_step == 2:
-                st.session_state.sim_step = 3
-                st.balloons()
-                st.success("PERFECT! You started Equivital and the Sync Timer together.")
-            elif st.session_state.sim_step < 2:
-                st.error("Too early! You haven't set up the video yet.")
-                
-        if st.button("🎥 Remote > & Sync 'Start'"):
-            st.error("Wrong trigger for this specific task (Walking Baseline). This trigger is for Giladi trials!")
+        st.markdown("### ✋ Right Hand (Tablet)")
+        gl_right = st.selectbox("Select Action:", ["(Nothing)", "Start", "Stop", "Record"], key="gl_R")
 
-    with col3:
-        st.subheader("3. Ending")
-        if st.button("🛑 Shift+E & Sync 'End'"):
-            if st.session_state.sim_step == 3:
-                st.session_state.sim_step = 0
-                st.success("Session Saved. Great job!")
-            else:
-                st.error("You aren't recording yet!")
+    if st.button("💥 EXECUTE TRIGGER", key="btn_gl"):
+        if check_dual_hand(gl_left, gl_right, "Remote > (Slide Forward)", "Start", "Beep sound occurs. Recording started."):
+            st.success("Great work.")
+            mark_complete("giladi")
 
-    if st.button("Reset Simulator"):
-        st.session_state.sim_step = 0
-        st.experimental_rerun()
+    st.markdown("### 🚪 The Trial 8 Trap")
+    st.write("Trial 8 is the 'Doorway Trial'. What must you do differently?")
+    t8_ans = st.radio("Action:", ["Nothing", "Move Frontal Camera to Green Tape inside room", "Change sensors"], index=None)
+    if t8_ans == "Move Frontal Camera to Green Tape inside room":
+        st.success("Correct. Don't forget this move!")
 
-# --- MODULE 4: EXAM ---
-elif module == "4. Exam: Full Giladi Trial":
-    st.title("🔥 The Final Exam: Giladi Protocol")
-    st.write("You are in the hot seat. No hints.")
-    
-    # A simple state machine for the exam
-    st.info("Scenario: The participant is standing ready. You need to run **Trial 1** of the Giladi protocol.")
-    
-    exam_actions = st.multiselect("Select your actions IN ORDER:", 
-        ["Press Start on Eqivital", 
-         "Check Camera Green Tape", 
-         "Check Camera Blue Tape",
-         "Type 'Record' in VideoSync", 
-         "Press Remote > & Sync App", 
-         "Yell 'Go!'"]
-    )
-    
-    if st.button("Submit Exam"):
-        correct_order = ["Check Camera Green Tape", "Type 'Record' in VideoSync", "Press Remote > & Sync App"]
+# ==========================================
+# MODULE 4: VR PROTOCOLS
+# ==========================================
+elif menu == "4. VR Protocols":
+    st.markdown("<div class='main-header'>Module 4: VR Familiarization & Repo</div>", unsafe_allow_html=True)
+    st.write("The participant is now wearing the VR headset. The commands change again.")
+
+    tab_vr1, tab_vr2 = st.tabs(["Familiarization (Sit/Stand/Walk)", "Repositioned (30s)"])
+
+    with tab_vr1:
+        st.markdown("### Familiarization Phase")
+        st.info("Sequence: 2 min Sit -> 2 min Stand -> 2 min Walk")
         
-        if exam_actions == correct_order:
-            st.balloons()
-            st.success("PASSED! You are ready to run the study.")
-        else:
-            st.error("FAILED. Review the protocol.")
-            st.write(f"You selected: {exam_actions}")
-            st.write("Correct Order: Check Green Tape -> Type Record -> Press Remote/Sync Trigger")
+        st.markdown("**Command Rule:** For VR Fam, we mostly use `Shift + S` on Equivital.")
+        
+        st.markdown("#### 🎮 Simulation: VR Walking Start")
+        st.write("Prepare to start the 2-min VR Walk.")
+        
+        vr_l = st.selectbox("Left Hand:", ["Shift + A", "Shift + S", "Shift + W"], key="vr_L")
+        vr_r = st.selectbox("Right Hand:", ["Start 2 min Sitting", "Start 2 min Walk"], key="vr_R")
+        
+        if st.button("💥 EXECUTE VR START", key="btn_vr"):
+            # Based on script: "Simultaneously press [Shift + S] & 'Start 2 min sitting'" 
+            # (Note: User script had a typo saying 'Sitting' for the walk phase, 
+            # but usually we want to log 'Walk'. I will look for 'Walk' to be safe, or 'Sit' if adhering strictly).
+            # Let's adhere to the LIKELY INTENT which is 'Start 2 min Walk'.
+            
+            if check_dual_hand(vr_l, vr_r, "Shift + S", "Start 2 min Walk", "Correct. Note: Ensure you press the 'Walk' button on tablet!"):
+                pass
+
+    with tab_vr2:
+        st.markdown("### Repositioned Trial (30s)")
+        st.error("⚠️ Cameras back to BLUE MARKINGS.")
+        
+        st.markdown("""
+        1. **PKMAS Start:** Press Start on PKMAS + Right Arrow on Remote.
+        2. **Verbal:** Say "Starting 30s".
+        3. **Equivital:** Shift + S (Sit) -> Wait 30s.
+        4. **Transition:** SyncApp Stop -> SyncApp Start + Shift + W (Walk).
+        """)
+        
+        if st.button("I understand the 30s protocol"):
+            mark_complete("vr")
+
+# ==========================================
+# FINAL REVIEW
+# ==========================================
+elif menu == "5. Final Review":
+    st.title("🎓 Certification")
+    
+    if all(st.session_state.progress.values()):
+        st.balloons()
+        st.markdown("""
+        <div class='success-box'>
+        <h2>🎉 CONGRATULATIONS!</h2>
+        You have completed the Lab Commander Training Course.<br>
+        You are now ready to operate the:
+        <ul>
+        <li>Equivital (Shift+A / Shift+S)</li>
+        <li>MobilityLab & Video Sync</li>
+        <li>Dual-Hand Triggers</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning("You have not completed all modules yet. Please go back and finish the checklists/simulations.")
+        st.write(st.session_state.progress)
